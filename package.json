@@ -1,0 +1,41 @@
+{
+  "name": "little-heart-public-school",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@cloudinary/react": "^1.14.3",
+    "@cloudinary/url-gen": "^1.22.0",
+    "autoprefixer": "^10.4.16",
+    "cloudinary": "^1.41.3",
+    "firebase": "^12.8.0",
+    "firebase-admin": "^13.6.0",
+    "framer-motion": "^12.29.2",
+    "next": "^16.1.5",
+    "next-themes": "^0.2.1",
+    "postcss": "^8.4.32",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-hook-form": "^7.48.2",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "swiper": "^11.0.5",
+    "tailwindcss": "^3.3.6",
+    "undici": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.0.4",
+    "typescript": "^5.3.3"
+  }
+}
