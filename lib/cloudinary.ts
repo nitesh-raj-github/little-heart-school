@@ -1,5 +1,9 @@
 'use client'
 
+/* ================================
+   Types
+================================ */
+
 export interface CloudinaryResponse {
   success: boolean
   url?: string
@@ -10,6 +14,10 @@ export interface CloudinaryResponse {
   bytes?: number
   error?: string
 }
+
+/* ================================
+   Upload (via API route)
+================================ */
 
 export const uploadToCloudinary = async (
   file: File,
@@ -50,6 +58,38 @@ export const uploadToCloudinary = async (
     }
   }
 }
+
+/* ================================
+   Delete (via API route) ✅ REQUIRED
+================================ */
+
+export const deleteFromCloudinary = async (
+  publicId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const res = await fetch('/api/cloudinary/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ publicId })
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data?.error || 'Delete failed')
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/* ================================
+   Image validation
+================================ */
 
 export const validateImage = (file: File) => {
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
