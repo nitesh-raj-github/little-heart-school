@@ -1,18 +1,18 @@
-// components/CloudinaryUploader.tsx
 'use client'
 
-import { useState, useRef } from 'react'
-import { 
-  uploadToCloudinary, 
-  validateImage, 
-  TRANSFORMATIONS 
+import { useRef, useState } from 'react'
+import {
+  uploadToCloudinary,
+  validateImage,
+  TRANSFORMATIONS,
+  CloudinaryUploadOptions
 } from '@/lib/cloudinary'
-import { FaUpload, FaImage, FaTimes, FaSpinner } from 'react-icons/fa'
+import { FaUpload, FaSpinner, FaTimes } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 
 interface CloudinaryUploaderProps {
   onUploadComplete: (url: string, publicId: string) => void
-  folder?: 'slider' | 'gallery' | 'faculty' | 'events' | 'about'
+  folder?: CloudinaryUploadOptions['folder']
   tags?: string[]
   maxFiles?: number
   preview?: boolean
@@ -24,147 +24,94 @@ export default function CloudinaryUploader({
   folder = 'gallery',
   tags = [],
   maxFiles = 1,
-  preview = true,
-  transformation = 'GALLERY'
+  preview = true
 }: CloudinaryUploaderProps) {
+  const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
-  const [previewUrls, setPreviewUrls] = useState<string[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [previews, setPreviews] = useState<string[]>([])
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || [])
-    
-    if (files.length === 0) return
-    
-    // Validate number of files
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+
     if (files.length > maxFiles) {
-      toast.error(`Maximum ${maxFiles} file${maxFiles > 1 ? 's' : ''} allowed`)
+      toast.error(`Max ${maxFiles} file(s) allowed`)
       return
     }
-    
-    // Validate each file
+
     for (const file of files) {
-      const validation = validateImage(file)
-      if (!validation.valid) {
-        toast.error(validation.message)
+      const check = validateImage(file)
+      if (!check.valid) {
+        toast.error(check.message)
         return
       }
     }
-    
-    // Create preview URLs
+
     if (preview) {
-      const urls = files.map(file => URL.createObjectURL(file))
-      setPreviewUrls(urls)
+      setPreviews(files.map(file => URL.createObjectURL(file)))
     }
-    
-    // Upload files
+
     setUploading(true)
-    
+
     try {
       for (const file of files) {
-       const result = await uploadToCloudinary(file, {
-  folder,
-  tags
-})
+        const options: CloudinaryUploadOptions = { folder, tags }
 
-        
+        const result = await uploadToCloudinary(file, options)
+
         if (result.success && result.url && result.publicId) {
           onUploadComplete(result.url, result.publicId)
-          toast.success('Image uploaded successfully!')
+          toast.success('Upload successful')
         } else {
           toast.error(result.error || 'Upload failed')
         }
       }
-    } catch (error) {
-      toast.error('Upload failed. Please try again.')
+    } catch {
+      toast.error('Upload failed')
     } finally {
       setUploading(false)
-      
-      // Clear previews
-      if (preview) {
-        previewUrls.forEach(url => URL.revokeObjectURL(url))
-        setPreviewUrls([])
-      }
-      
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+      setPreviews([])
+      if (fileRef.current) fileRef.current.value = ''
     }
-  }
-
-  const removePreview = (index: number) => {
-    URL.revokeObjectURL(previewUrls[index])
-    const newUrls = previewUrls.filter((_, i) => i !== index)
-    setPreviewUrls(newUrls)
   }
 
   return (
     <div className="space-y-4">
-      {/* Upload Area */}
       <div
-        onClick={() => !uploading && fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-          transition-colors hover:border-primary-red
-          ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
+        onClick={() => !uploading && fileRef.current?.click()}
+        className="border-2 border-dashed p-8 rounded-xl text-center cursor-pointer"
       >
         <input
-          ref={fileInputRef}
+          ref={fileRef}
           type="file"
           accept="image/*"
           multiple={maxFiles > 1}
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={uploading}
+          onChange={handleChange}
+          hidden
         />
-        
-        <div className="space-y-4">
-          {uploading ? (
-            <div className="flex flex-col items-center">
-              <FaSpinner className="animate-spin text-3xl text-primary-red mb-2" />
-              <p className="text-gray-600">Uploading...</p>
-            </div>
-          ) : (
-            <>
-              <FaUpload className="mx-auto text-3xl text-gray-400" />
-              <div>
-                <p className="font-medium text-gray-700">
-                  Click or drag to upload images
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  JPEG, PNG, GIF, WebP up to 5MB
-                </p>
-                {maxFiles > 1 && (
-                  <p className="text-sm text-gray-500">
-                    Maximum {maxFiles} files
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+
+        {uploading ? (
+          <FaSpinner className="animate-spin text-3xl mx-auto" />
+        ) : (
+          <>
+            <FaUpload className="mx-auto text-3xl" />
+            <p className="mt-2 text-sm">Click to upload image</p>
+          </>
+        )}
       </div>
 
-      {/* Preview Area */}
-      {preview && previewUrls.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {previewUrls.map((url, index) => (
-            <div key={index} className="relative group">
-              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                <img
-                  src={url}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+      {preview && previews.length > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          {previews.map((url, i) => (
+            <div key={i} className="relative">
+              <img src={url} className="rounded-lg object-cover" />
               <button
-                onClick={() => removePreview(index)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full
-                         opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() =>
+                  setPreviews(prev => prev.filter((_, idx) => idx !== i))
+                }
+                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"
               >
-                <FaTimes size={14} />
+                <FaTimes size={12} />
               </button>
             </div>
           ))}

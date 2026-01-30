@@ -31,8 +31,11 @@ export const uploadToCloudinary = async (
   options: CloudinaryUploadOptions = {}
 ): Promise<CloudinaryUploadResult> => {
   try {
-    const formData = new FormData()
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Only image files are allowed')
+    }
 
+    const formData = new FormData()
     formData.append('file', file)
     formData.append(
       'upload_preset',
@@ -47,7 +50,7 @@ export const uploadToCloudinary = async (
       formData.append('public_id', options.publicId)
     }
 
-    if (options.tags && options.tags.length > 0) {
+    if (options.tags?.length) {
       formData.append('tags', options.tags.join(','))
     }
 
@@ -56,19 +59,18 @@ export const uploadToCloudinary = async (
     }
 
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
       {
         method: 'POST',
         body: formData
       }
     )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(errorText)
-    }
-
     const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || 'Cloudinary upload failed')
+    }
 
     return {
       success: true,
@@ -93,8 +95,8 @@ export const uploadToCloudinary = async (
  */
 export const optimizeImage = async (
   file: File,
-  maxWidth: number,
-  quality: number
+  maxWidth: number = 1920,
+  quality: number = 80
 ): Promise<File> => {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -114,13 +116,14 @@ export const optimizeImage = async (
       canvas.height = img.height * scale
 
       const ctx = canvas.getContext('2d')
-      if (!ctx) return reject('Canvas error')
+      if (!ctx) return reject(new Error('Canvas error'))
 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
       canvas.toBlob(
         blob => {
-          if (!blob) return reject('Blob creation failed')
+          if (!blob) return reject(new Error('Blob creation failed'))
+
           resolve(
             new File([blob], file.name, {
               type: file.type,
