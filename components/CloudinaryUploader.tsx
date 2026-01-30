@@ -1,17 +1,13 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import {
-  uploadToCloudinary,
-  validateImage,
-  CloudinaryUploadOptions
-} from '@/lib/cloudinary'
+import { uploadToCloudinary, validateImage } from '@/lib/cloudinary'
 import { FaUpload, FaSpinner, FaTimes } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 
 interface CloudinaryUploaderProps {
   onUploadComplete: (url: string, publicId: string) => void
-  folder?: CloudinaryUploadOptions['folder']
+  folder?: string
   maxFiles?: number
   preview?: boolean
 }
@@ -51,9 +47,7 @@ export default function CloudinaryUploader({
 
     try {
       for (const file of files) {
-        const options: CloudinaryUploadOptions = { folder }
-
-        const result = await uploadToCloudinary(file, options)
+        const result = await uploadToCloudinary(file, { folder })
 
         if (result.success && result.url && result.publicId) {
           onUploadComplete(result.url, result.publicId)
