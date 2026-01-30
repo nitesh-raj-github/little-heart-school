@@ -1,131 +1,138 @@
-// utils/uploadToCloudinary.ts
 'use client'
 
-import { uploadToCloudinary, optimizeImage } from '@/lib/cloudinary'
+/**
+ * Cloudinary client-side helpers
+ * Used only for uploads via unsigned presets
+ */
 
-export interface UploadOptions {
+export interface CloudinaryUploadOptions {
   folder?: string
   publicId?: string
   tags?: string[]
-  optimize?: boolean
-  maxWidth?: number
-  quality?: number
   transformations?: string
 }
 
-export const uploadImage = async (
+export interface CloudinaryUploadResult {
+  success: boolean
+  url?: string
+  publicId?: string
+  width?: number
+  height?: number
+  format?: string
+  bytes?: number
+  error?: string
+}
+
+/**
+ * Upload file to Cloudinary
+ */
+export const uploadToCloudinary = async (
   file: File,
-  options: UploadOptions = {}
-): Promise<{
-  url: string
-  publicId: string
-  width: number
-  height: number
-  format: string
-  bytes: number
-}> => {
+  options: CloudinaryUploadOptions = {}
+): Promise<CloudinaryUploadResult> => {
   try {
-    let fileToUpload = file
-    
-    // Optimize image if requested
-    if (options.optimize !== false && file.type.startsWith('image/')) {
-      fileToUpload = await optimizeImage(
-        file,
-        options.maxWidth || 1920,
-        options.quality || 80
+    const formData = new FormData()
+
+    formData.append('file', file)
+    formData.append(
+      'upload_preset',
+      process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+    )
+
+    if (options.folder) {
+      formData.append('folder', options.folder)
+    }
+
+    if (options.publicId) {
+      formData.append('public_id', options.publicId)
+    }
+
+    if (options.tags && options.tags.length > 0) {
+      formData.append('tags', options.tags.join(','))
+    }
+
+    if (options.transformations) {
+      formData.append('transformation', options.transformations)
+    }
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText)
+    }
+
+    const data = await response.json()
+
+    return {
+      success: true,
+      url: data.secure_url,
+      publicId: data.public_id,
+      width: data.width,
+      height: data.height,
+      format: data.format,
+      bytes: data.bytes
+    }
+  } catch (error: any) {
+    console.error('Cloudinary upload error:', error)
+    return {
+      success: false,
+      error: error.message || 'Cloudinary upload failed'
+    }
+  }
+}
+
+/**
+ * Client-side image optimization
+ */
+export const optimizeImage = async (
+  file: File,
+  maxWidth: number,
+  quality: number
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      img.src = reader.result as string
+    }
+
+    reader.onerror = reject
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const scale = Math.min(1, maxWidth / img.width)
+
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject('Canvas error')
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+      canvas.toBlob(
+        blob => {
+          if (!blob) return reject('Blob creation failed')
+          resolve(
+            new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            })
+          )
+        },
+        file.type,
+        quality / 100
       )
     }
-    
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(fileToUpload, {
-      folder: options.folder || 'littleheart_school',
-      publicId: options.publicId,
-      tags: options.tags,
-      transformations: options.transformations
-    })
-    
-    if (!result.success || !result.url || !result.publicId) {
-      throw new Error(result.error || 'Upload failed')
-    }
-    
-    return {
-      url: result.url,
-      publicId: result.publicId,
-      width: result.width || 0,
-      height: result.height || 0,
-      format: result.format || 'jpg',
-      bytes: result.bytes || 0
-    }
-    
-  } catch (error) {
-    console.error('Image upload error:', error)
-    throw new Error('Failed to upload image')
-  }
-}
 
-export const uploadMultipleImages = async (
-  files: File[],
-  options: UploadOptions = {}
-): Promise<Array<{
-  url: string
-  publicId: string
-  width: number
-  height: number
-  format: string
-  bytes: number
-}>> => {
-  const uploadPromises = files.map(file => uploadImage(file, options))
-  return await Promise.all(uploadPromises)
-}
-
-export const deleteImage = async (publicId: string): Promise<void> => {
-  try {
-    const response = await fetch(`/api/cloudinary/delete?publicId=${encodeURIComponent(publicId)}`, {
-      method: 'DELETE'
-    })
-    
-    if (!response.ok) {
-      throw new Error('Delete failed')
-    }
-  } catch (error) {
-    console.error('Delete image error:', error)
-    throw error
-  }
-}
-
-// Image optimization helper
-export const createImageOptimizer = (
-  maxWidth: number = 1920,
-  quality: number = 80
-) => {
-  return async (file: File): Promise<File> => {
-    return await optimizeImage(file, maxWidth, quality)
-  }
-}
-
-// Generate responsive image URLs
-export const getResponsiveImageUrls = (
-  publicId: string,
-  options: {
-    widths?: number[]
-    transformations?: string
-  } = {}
-): {
-  src: string
-  srcSet: string
-  sizes: string
-} => {
-  const widths = options.widths || [320, 640, 768, 1024, 1280, 1920]
-  const baseTransformations = options.transformations || 'q_auto,f_webp'
-  
-  const urls = widths.map(width => {
-    const url = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${baseTransformations},w_${width}/${publicId}`
-    return `${url} ${width}w`
+    reader.readAsDataURL(file)
   })
-  
-  return {
-    src: `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${baseTransformations},w_1024/${publicId}`,
-    srcSet: urls.join(', '),
-    sizes: '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
-  }
 }
