@@ -53,6 +53,10 @@ export const uploadToCloudinary = async (
     if (options?.folder) {
       formData.append('folder', options.folder)
     }
+    if (options?.tags && options.tags.length > 0) {
+  formData.append('tags', options.tags.join(','))
+}
+
 
     const response = await fetch(CLOUDINARY_CONFIG.apiUrl, {
       method: 'POST',
