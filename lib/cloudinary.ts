@@ -32,8 +32,10 @@ export const uploadToCloudinary = async (
   file: File,
   options?: {
     folder?: string
+    tags?: string[]
   }
 ): Promise<CloudinaryResponse> => {
+
   try {
     if (!file.type.startsWith('image/')) {
       throw new Error('Only image files are allowed')
