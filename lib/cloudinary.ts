@@ -6,7 +6,6 @@
 
 export interface CloudinaryUploadOptions {
   folder?: string
-  tags?: string[]
 }
 
 export interface CloudinaryResponse {
@@ -21,14 +20,10 @@ export interface CloudinaryResponse {
 }
 
 /* ================================
-   Config
+   Upload (client-side, unsigned)
 ================================ */
 
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`
-
-/* ================================
-   Upload (client-side, unsigned)
-================================ */
 
 export const uploadToCloudinary = async (
   file: File,
@@ -36,7 +31,11 @@ export const uploadToCloudinary = async (
 ): Promise<CloudinaryResponse> => {
   try {
     if (!file.type.startsWith('image/')) {
-      throw new Error('Only image files allowed')
+      throw new Error('Only image files are allowed')
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('File must be less than 5MB')
     }
 
     const formData = new FormData()
@@ -48,10 +47,6 @@ export const uploadToCloudinary = async (
 
     if (options.folder) {
       formData.append('folder', options.folder)
-    }
-
-    if (options.tags?.length) {
-      formData.append('tags', options.tags.join(','))
     }
 
     const res = await fetch(CLOUDINARY_UPLOAD_URL, {
@@ -81,3 +76,28 @@ export const uploadToCloudinary = async (
     }
   }
 }
+
+/* ================================
+   Image validation
+================================ */
+
+export const validateImage = (file: File) => {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowed.includes(file.type)) {
+    return { valid: false, message: 'Invalid image type' }
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { valid: false, message: 'Max file size is 5MB' }
+  }
+  return { valid: true }
+}
+
+/* ================================
+   Transform presets (optional)
+================================ */
+
+export const TRANSFORMATIONS = {
+  HERO: 'c_fill,g_auto,w_1200,h_800,q_auto,f_auto',
+  GALLERY: 'c_fill,g_auto,w_800,h_600,q_auto,f_auto',
+  FACULTY: 'c_fill,g_face,w_400,h_400,q_auto,f_auto'
+} as const
