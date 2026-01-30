@@ -6,6 +6,7 @@
 
 export interface CloudinaryUploadOptions {
   folder?: string
+  tags?: string | string[]
 }
 
 export interface CloudinaryResponse {
@@ -47,6 +48,15 @@ export const uploadToCloudinary = async (
 
     if (options.folder) {
       formData.append('folder', options.folder)
+    }
+
+    if (options.tags) {
+      formData.append(
+        'tags',
+        Array.isArray(options.tags)
+          ? options.tags.join(',')
+          : options.tags
+      )
     }
 
     const res = await fetch(CLOUDINARY_UPLOAD_URL, {
