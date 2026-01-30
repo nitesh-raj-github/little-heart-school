@@ -4,7 +4,6 @@ import { useRef, useState } from 'react'
 import {
   uploadToCloudinary,
   validateImage,
-  TRANSFORMATIONS,
   CloudinaryUploadOptions
 } from '@/lib/cloudinary'
 import { FaUpload, FaSpinner, FaTimes } from 'react-icons/fa'
@@ -13,16 +12,13 @@ import toast from 'react-hot-toast'
 interface CloudinaryUploaderProps {
   onUploadComplete: (url: string, publicId: string) => void
   folder?: CloudinaryUploadOptions['folder']
-  tags?: string[]
   maxFiles?: number
   preview?: boolean
-  transformation?: keyof typeof TRANSFORMATIONS
 }
 
 export default function CloudinaryUploader({
   onUploadComplete,
   folder = 'gallery',
-  tags = [],
   maxFiles = 1,
   preview = true
 }: CloudinaryUploaderProps) {
@@ -35,7 +31,7 @@ export default function CloudinaryUploader({
     if (!files.length) return
 
     if (files.length > maxFiles) {
-      toast.error(`Max ${maxFiles} file(s) allowed`)
+      toast.error(`Maximum ${maxFiles} file(s) allowed`)
       return
     }
 
@@ -55,13 +51,13 @@ export default function CloudinaryUploader({
 
     try {
       for (const file of files) {
-        const options: CloudinaryUploadOptions = { folder, tags }
+        const options: CloudinaryUploadOptions = { folder }
 
         const result = await uploadToCloudinary(file, options)
 
         if (result.success && result.url && result.publicId) {
           onUploadComplete(result.url, result.publicId)
-          toast.success('Upload successful')
+          toast.success('Image uploaded successfully')
         } else {
           toast.error(result.error || 'Upload failed')
         }
